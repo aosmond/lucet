@@ -388,7 +388,13 @@ impl Vmctx {
     }
 
     fn yield_impl<A: Any + 'static, R: Any + 'static>(&self, val: A) {
-        self.ensure_no_borrows();
+        let is_async = match self.instance().state {
+            State::Running { async_context } => async_context,
+            _ => false,
+        };
+        if !is_async {
+            self.ensure_no_borrows();
+        }
         let inst = unsafe { self.instance_mut() };
         let expecting: Box<PhantomData<R>> = Box::new(PhantomData);
         inst.state = State::Yielding {
